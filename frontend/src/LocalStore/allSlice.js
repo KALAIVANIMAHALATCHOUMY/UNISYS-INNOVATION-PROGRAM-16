@@ -3,7 +3,7 @@ import {createSlice, createAsyncThunk} from "@reduxjs/toolkit"
 const baseUrl = "http://127.0.0.1:5000";
 
 const initialState = {
-
+    createdAgentsList: [],
 }
 
 export const createLowCodeAgent = createAsyncThunk(
@@ -36,11 +36,13 @@ export const entripriseAgents = createSlice({
   name: 'entripriseAgents',
   initialState,
   reducers: {
-    // setUserInput(state,action)
-    // {
-    //     state.currentUserInput = action.payload;
-    // },
-  },
+    setCreateAgent: (state, action) => {
+        state.createdAgentsList = [
+            ...state.createdAgentsList,
+            action.payload
+        ]
+        },
+    },
   extraReducers : (builder) => 
     {
         builder
@@ -73,6 +75,6 @@ export const entripriseAgents = createSlice({
 })
 
 // Action creators are generated for each case reducer function
-export const { } = entripriseAgents.actions
+export const { setCreateAgent } = entripriseAgents.actions
 
 export default entripriseAgents.reducer
