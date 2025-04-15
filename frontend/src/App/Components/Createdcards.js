@@ -17,9 +17,10 @@ import Link from '@mui/material/Link';
 import HomeIcon from '@mui/icons-material/Home';
 import WhatshotIcon from '@mui/icons-material/Whatshot';
 import GrainIcon from '@mui/icons-material/Grain';
+import { useSelector } from 'react-redux';
+import { useEffect } from 'react';
 
-
-function ProductCard({ title, owner }) {
+function ProductCard({ title, description, owner = 'Dhaneshvar' }) {
   return (
     <Card variant="outlined" sx={{ maxWidth: 300, width: '100%', borderRadius: 3, boxShadow: 2 }}>
       <Box sx={{ p: 2 }}>
@@ -45,7 +46,7 @@ function ProductCard({ title, owner }) {
 
         {/* Description */}
         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          Pinstriped cornflower blue cotton blouse takes you on a walk to the park or just down the hall.
+          {description}
         </Typography>
       </Box>
 
@@ -66,14 +67,22 @@ function ProductCard({ title, owner }) {
 }
 
 export default function IntroDivider() {
-  const cardData = [
-    { title: 'HR Agent', owner: 'Dhaneshvar' },
-    { title: 'Admin Agent', owner: 'Kalai' },
-    { title: 'Manager Agent', owner: 'Maha' },
-    { title: 'Agent', owner: 'Stridarane' },
-    { title: 'Agent', owner: 'Anand kumar' },
-    { title: 'Agent', owner: 'bodhi' },
-  ];
+
+  const createdAgentsList = useSelector((state) => state.createdAgentsList);
+  console.log("createdAgents", createdAgentsList);
+
+  useEffect(() => {
+    console.log("createdAgentsList", createdAgentsList);
+  }, [createdAgentsList]);
+
+  // // const cardData = [
+  // //   { title: 'HR Agent', owner: 'Dhaneshvar' },
+  // //   { title: 'Admin Agent', owner: 'Kalai' },
+  // //   { title: 'Manager Agent', owner: 'Maha' },
+  // //   { title: 'Agent', owner: 'Stridarane' },
+  // //   { title: 'Agent', owner: 'Anand kumar' },
+  // //   { title: 'Agent', owner: 'bodhi' },
+  // // ];
 
   function handleClick(event) {
     event.preventDefault();
@@ -122,8 +131,8 @@ export default function IntroDivider() {
           justifyContent: 'center',
         }}
       >
-        {cardData.map((item, idx) => (
-          <ProductCard key={idx} title={item.title} owner={item.owner} />
+        {createdAgentsList.map((item, idx) => (
+          <ProductCard key={idx} title={item.applicationName} description={item.description} />
         ))}
       </Box>
     </Box>

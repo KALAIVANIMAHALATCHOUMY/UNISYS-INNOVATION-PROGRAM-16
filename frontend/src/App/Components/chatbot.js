@@ -29,6 +29,9 @@ import SmartToyIcon from '@mui/icons-material/SmartToy';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import { useTheme } from "@mui/material/styles";
+import { useDispatch, useSelector } from "react-redux";
+import { setUserSystemConversations, Conversation } from "../../LocalStore/allSlice";
+
 
 export default function ChatBotApp() {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
@@ -37,6 +40,10 @@ export default function ChatBotApp() {
     { sender: "bot", message: "Hi there! How can I assist you today?" },
     { sender: "user", message: "I need help with uploading documents." }
   ]);
+
+  const dispatch = useDispatch();
+  const userSystemConversationsFromRedux = useSelector((state) => state.userSystemConversations);
+  console.log("userSystemConversationsFromRedux", userSystemConversationsFromRedux);
   const [inputMessage, setInputMessage] = useState("");
   const chatEndRef = useRef(null);
 
@@ -56,6 +63,8 @@ export default function ChatBotApp() {
   const handleSendMessage = () => {
     if (!inputMessage.trim()) return;
     setChatHistory([...chatHistory, { sender: "user", message: inputMessage }]);
+    dispatch(setUserSystemConversations(inputMessage ));
+    dispatch(Conversation( inputMessage ));
     setInputMessage("");
   };
 
@@ -143,7 +152,7 @@ export default function ChatBotApp() {
 
         {/* Chat Messages */}
         <Box flex={1} overflow="auto" mb={1} px={2} id="chat-container">
-          {chatHistory.map((msg, index) => (
+          {userSystemConversationsFromRedux?.map((msg, index) => (
             <Box
               key={index}
               display="flex"
@@ -159,9 +168,10 @@ export default function ChatBotApp() {
                 maxWidth="75%"
                 mr={msg.sender === "user" ? 1 : 0}
               >
-                {msg.message.split("\n").map((line, i) => (
+                {msg.message}
+                {/* {msg.message.split("\n").map((line, i) => (
                   <div key={i}>{line}</div>
-                ))}
+                ))} */}
               </Box>
               {msg.sender === "user" && <Avatar><PersonIcon /></Avatar>}
             </Box>
