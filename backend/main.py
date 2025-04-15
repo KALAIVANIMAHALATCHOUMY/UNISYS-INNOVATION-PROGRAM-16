@@ -2,6 +2,8 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from flask import request
 import sys
+from agents import mainLogicStartsHere
+
 sys.path.insert(0, '..')
 
 app = Flask("__name__")
@@ -12,7 +14,9 @@ CORS(app, resources={r"*": {"origins": "http://localhost:3000"}})
 def invokeModel():
     userQry = request.data.decode('utf-8')
     print(userQry)
-    return jsonify("hi this is gpt resonse")
+    res = mainLogicStartsHere(userQry)
+    print("res", res['response'])
+    return jsonify(res['response'])
 
 
 

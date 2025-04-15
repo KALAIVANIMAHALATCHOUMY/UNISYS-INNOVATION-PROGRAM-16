@@ -88,7 +88,7 @@ export const entripriseAgents = createSlice({
             state.userSystemConversations = [
                 ...state.userSystemConversations,
                 {message: state.currentUserInput, sender: 'user'},  // it is the current user Message
-                {message: "loading" , sender: 'bot', audioURL: ""}   // chat gpt Message
+                {message: "loading" , sender: 'bot'}   // chat gpt Message
             ]
             state.currentUserInput = "";
         })
@@ -97,7 +97,7 @@ export const entripriseAgents = createSlice({
             state.userSystemConversations.pop();
                 state.userSystemConversations = [
                     ...state.userSystemConversations,
-                    {message: action.payload.message, sender: 'bot'}   // chat gpt Message,
+                    {message: action.payload, sender: 'bot'}   // chat gpt Message,
 
                 ]
         })
