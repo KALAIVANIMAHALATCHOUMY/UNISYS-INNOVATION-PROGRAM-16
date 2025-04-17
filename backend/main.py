@@ -28,7 +28,7 @@ if __name__ == "__main__":
 # python -m venv uip
 # uip\Scripts\Activate
 
-# flask --app starter --debug run
+# flask --app main --debug run
 
 # pip install Flask
 # pip install Flask-Cors

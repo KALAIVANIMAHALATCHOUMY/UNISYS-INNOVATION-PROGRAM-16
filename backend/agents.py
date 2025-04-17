@@ -84,7 +84,7 @@ def get_query(state: State) -> str:
 # Documentation search
 def documentation_search(state: State) -> Dict:
     if not state.document_path or not os.path.exists(state.document_path):
-        return {"response": "❌ Invalid or missing document path."}
+        return {"doc_search_response": "❌ Invalid or missing document path."}
     
     doc_texts = load_and_index_documents(state.document_path, state.query)
     response = llm.invoke([
@@ -100,7 +100,7 @@ def documentation_search(state: State) -> Dict:
     """),
         HumanMessage(content=f"Query: {state.query}\nRelevant Docs:\n{' '.join(doc_texts)}")
     ])
-    return {"response": response.content}
+    return {"doc_search_response": response.content}
 
 # IT support with RAG
 def it_support(state: State) -> Dict:
@@ -125,7 +125,7 @@ def it_support(state: State) -> Dict:
     """),
         HumanMessage(content=f"Query: {state.query}\nRelevant IT Docs:\n{docs}")
     ])
-    return {"response": response.content}
+    return {"it_response": response.content}
 
 # HR assistance with RAG
 def hr_assistance(state: State) -> Dict:
@@ -150,7 +150,7 @@ def hr_assistance(state: State) -> Dict:
     """),
         HumanMessage(content=f"Query: {state.query}\nRelevant HR Docs:\n{docs}")
     ])
-    return {"response": response.content}
+    return {"hr_response": response.content}
 
 
 def wellness(state: State) -> Dict:
@@ -207,7 +207,7 @@ def productivity(state: State) -> Dict:
     """),
         HumanMessage(content=f"Query: {state.query}\nRelevant PRODUCTIVITY Docs:\n{docs}")
     ])
-    return {"response": response.content}
+    return {"productivity": response.content}
 
 
 
@@ -236,7 +236,7 @@ def risk(state: State) -> Dict:
     """),
         HumanMessage(content=f"Query: {state.query}\nRelevant RISK Docs:\n{docs}")
     ])
-    return {"response": response.content}
+    return {"risk": response.content}
 
 
 
@@ -255,7 +255,7 @@ def web_search(state: State) -> Dict:
     """),
         HumanMessage(content=get_query(state))
     ])
-    return {"response": response.content}
+    return {"web_search_response": response.content}
 
 
 def assign_task(state: State) -> Dict:
@@ -533,7 +533,81 @@ def route_query(state: State) -> str:
         return "Web Search"
     return "Web Search"
 
+# # Build graph
+# graph = lg.StateGraph(State)
+# graph.add_node("Router", lambda state: state.model_dump())
+# graph.add_node("IT Support", it_support)
+# graph.add_node("HR Assistance", hr_assistance)
+# graph.add_node("Web Search", web_search)
+# graph.add_node("Documentation Search", documentation_search)
+# graph.add_node("Wellness Assistance", wellness)
+# graph.add_node("Productivity Assistance", productivity)
+# graph.add_node("Risk Assistance", risk)
+# graph.add_node("Assign Task", assign_task)
+# graph.add_node("Estimate Completion", estimate_completion)
 
+# graph.set_entry_point("Router")
+# graph.add_conditional_edges("Router", route_query, {
+#     "IT Support": "IT Support",
+#     "HR Assistance": "HR Assistance",
+#     "Web Search": "Web Search",
+#     "Documentation Search": "Documentation Search",
+#     "Wellness Assistance": "Wellness Assistance",
+#     "Productivity Assistance": "Productivity Assistance",
+#     "Risk Assistance": "Risk Assistance",
+#     "Assign Task": "Assign Task",
+#     "Estimate Completion": "Estimate Completion",
+#     END: END
+# })
+
+# workflow = graph.compile()
+
+# # Example usage
+# input_data = {
+#     "query": "Our team often waits on approvals from other departments. It’s causing standstills, and we don’t know who to escalate to"
+#     # "document_path": "C:/Users/Welcome/Downloads/SIMULINK BLOCK.pdf"
+# }
+
+# result = workflow.invoke(State(**input_data))
+# print(result)
+
+# # Build graph
+# graph = lg.StateGraph(State)
+# graph.add_node("Router", lambda state: state.model_dump())
+# graph.add_node("IT Support", it_support)
+# graph.add_node("HR Assistance", hr_assistance)
+# graph.add_node("Web Search", web_search)
+# graph.add_node("Documentation Search", documentation_search)
+# graph.add_node("Wellness Assistance", wellness)
+# graph.add_node("Productivity Assistance", productivity)
+# graph.add_node("Risk Assistance", risk)
+# graph.add_node("Assign Task", assign_task)
+# graph.add_node("Estimate Completion", estimate_completion)
+
+# graph.set_entry_point("Router")
+# graph.add_conditional_edges("Router", route_query, {
+#     "IT Support": "IT Support",
+#     "HR Assistance": "HR Assistance",
+#     "Web Search": "Web Search",
+#     "Documentation Search": "Documentation Search",
+#     "Wellness Assistance": "Wellness Assistance",
+#     "Productivity Assistance": "Productivity Assistance",
+#     "Risk Assistance": "Risk Assistance",
+#     "Assign Task": "Assign Task",
+#     "Estimate Completion": "Estimate Completion",
+#     END: END
+# })
+
+# workflow = graph.compile()
+
+# # Example usage
+# input_data = {
+#     "query": "We've experienced delays in the last two sprints due to underestimated testing time. I?m worried it might happen again in the upcoming release."
+#     # "document_path": "C:/Users/Welcome/Downloads/SIMULINK BLOCK.pdf"
+# }
+
+# result = workflow.invoke(State(**input_data))
+# print(result)
 def mainLogicStartsHere(userQuery:str):
     # Build graph
     graph = lg.StateGraph(State)
@@ -573,7 +647,15 @@ def mainLogicStartsHere(userQuery:str):
 
     result = workflow.invoke(State(**input_data))
     print("Agents.py res",result)
-    return result
+    # return result
+    final_output = {"query": result.get("query")}
+    for key in ["risk", "it_response", "hr_response", "wellness", "productivity", "web_search_response", "doc_search_response", "assigned_to", "estimated_completion"]:
+        if result.get(key):
+            final_output["response"] = result[key]
+            break
+
+# Return the final_output instead of printing it
+    return final_output
     # return {'response':f"{userQuery} yes done"}
 
 # if __name__ == "__main__":
