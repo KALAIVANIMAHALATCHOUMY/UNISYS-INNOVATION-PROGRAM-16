@@ -17,6 +17,7 @@
 
 # backend
 /backend/uip
+/backend/.venv
 /backend/*.pyc
 /backend/__pycache__
 /backend/uip/__pycache__

@@ -3,7 +3,10 @@ import {createSlice, createAsyncThunk} from "@reduxjs/toolkit"
 const baseUrl = "http://127.0.0.1:5000";
 
 const initialState = {
-    createdAgentsList: [{"name":"Dhan"}],
+    createdAgentsList: [],
+    openPopModal : false,
+    fileNames : {},
+    snackBarSuccess : false,
     currentUserInput: '',
     userSystemConversations: [
         {
@@ -80,6 +83,43 @@ export const entripriseAgents = createSlice({
             console.log("current User Input", action.payload)
             state.currentUserInput = action.payload;
         },
+        setOpenModal(state,action)
+        {
+            state.openPopModal = action.payload;
+        },
+        setFilesName(state, action) {
+            const { agentName, files } = action.payload;
+            const newFileNames = files.map(file => file.name);
+        
+            // Get existing files, or default to an empty array
+            const existingFiles = state.fileNames[agentName] || [];
+        
+            // Merge and remove duplicates
+            const mergedFiles = Array.from(new Set([...existingFiles, ...newFileNames]));
+        
+            // Save back into the state
+            state.fileNames[agentName] = mergedFiles;
+        
+            console.log("Updated fileNames:", JSON.parse(JSON.stringify(state.fileNames)));
+        },
+        setSnackBarSuccess(state, action)
+        {
+            state.snackBarSuccess = !state.snackBarSuccess;
+        },
+        updateAgentWithUploadedFiles(state, action) {
+            const { title } = action.payload;
+            console.log("updateAgentWithUploadedFiles", action.payload);
+        
+            state.createdAgentsList = state.createdAgentsList.map((agent) => {
+                if (agent.applicationName === title) {
+                    return {
+                        ...agent,
+                        files: state.fileNames[title] || [],
+                    };
+                }
+                return agent;
+            });
+        }
     },
   extraReducers : (builder) => 
     {
@@ -113,6 +153,6 @@ export const entripriseAgents = createSlice({
 })
 
 // Action creators are generated for each case reducer function
-export const { setCreateAgent, setUserSystemConversations } = entripriseAgents.actions
+export const { setCreateAgent, setUserSystemConversations,  setOpenModal,setFilesName,setSnackBarSuccess, updateAgentWithUploadedFiles  } = entripriseAgents.actions
 
 export default entripriseAgents.reducer

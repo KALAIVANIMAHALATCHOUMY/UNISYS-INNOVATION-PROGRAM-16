@@ -19,8 +19,30 @@ import WhatshotIcon from '@mui/icons-material/Whatshot';
 import GrainIcon from '@mui/icons-material/Grain';
 import { useSelector } from 'react-redux';
 import { useEffect } from 'react';
+import ScrollDialog from "./FileUploadModal";
+import { setOpenModal, updateAgentWithUploadedFiles } from '../../LocalStore/allSlice';
+import { useDispatch } from 'react-redux';
+import FullScreenDialog from './TablePreview';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 
-function ProductCard({ title, description, owner = 'Dhaneshvar' }) {
+
+function ProductCard({ title, description, owner = 'Kalaivani' }) {
+  const dispatch = useDispatch();
+
+  const handleOpenPopup = (title) => {
+    dispatch(setOpenModal(true));
+    dispatch(updateAgentWithUploadedFiles(title));
+  };
+
+  const [showTable, setShowTable] = React.useState(false);
+
+  const handleShowTable = () => {
+    setShowTable(true);
+  };
+
+  const openModal = useSelector((state) => state.openPopModal);
+
   return (
     <Card variant="outlined" sx={{ maxWidth: 300, width: '100%', borderRadius: 3, boxShadow: 2 }}>
       <Box sx={{ p: 2 }}>
@@ -59,7 +81,14 @@ function ProductCard({ title, description, owner = 'Dhaneshvar' }) {
         </Typography>
         <Stack direction="row" spacing={1}>
           <Tooltip title={`Chat with ${title}`}><Chip icon={<ChatIcon />} label="Chat" clickable /> </Tooltip>
-          <Tooltip title={`Configure ${title}`}><Chip icon={<SettingsIcon />} label="Configure" variant="outlined" clickable /></Tooltip>
+          <Tooltip title={`Configure ${title}`}>
+          { openModal? <ScrollDialog agentName={title} /> : null }
+            <Chip icon={<AttachFileIcon />} onClick={() => handleOpenPopup(title)} label="Configure" variant="outlined" />
+          </Tooltip>
+          <Tooltip title={`Show Knowledge base ${title}`}>
+          { showTable? <FullScreenDialog agentName={title} setShowTable={setShowTable} showTable={showTable}  /> : null }
+            <Chip icon={<FolderOpenIcon />} onClick={() => handleShowTable()} label="Show" variant="outlined" />
+          </Tooltip>
         </Stack>
       </Box>
     </Card>

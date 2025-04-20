@@ -31,6 +31,7 @@ import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import { useTheme } from "@mui/material/styles";
 import { useDispatch, useSelector } from "react-redux";
 import { setUserSystemConversations, Conversation } from "../../LocalStore/allSlice";
+import { TypeWritterEffect } from "./Typewritter";
 
 
 export default function ChatBotApp() {
@@ -153,6 +154,7 @@ export default function ChatBotApp() {
         {/* Chat Messages */}
         <Box flex={1} overflow="auto" mb={1} px={2} id="chat-container">
           {userSystemConversationsFromRedux?.map((msg, index) => (
+            console.log(msg.sender, msg.message),
             <Box
               key={index}
               display="flex"
@@ -168,7 +170,8 @@ export default function ChatBotApp() {
                 maxWidth="75%"
                 mr={msg.sender === "user" ? 1 : 0}
               >
-                {msg.message}
+                <TypeWritterEffect  text={msg.message} typeUserorBot={msg.sender} />
+                {/* {msg.message} */}
                 {/* {msg.message.split("\n").map((line, i) => (
                   <div key={i}>{line}</div>
                 ))} */}
