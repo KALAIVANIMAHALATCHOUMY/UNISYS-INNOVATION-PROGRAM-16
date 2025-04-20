@@ -12,7 +12,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from datetime import datetime, timedelta
 from langchain_groq import ChatGroq
 from langgraph.graph import StateGraph, END
-
+import re
 
 # Load environment variables
 load_dotenv()
@@ -25,34 +25,42 @@ vector_store = Chroma(embedding_function=embedding_model)
 
 
 # Set default document paths for RAG
-DEFAULT_IT_DOC_PATH = "D:/manual_It_support_agent.pdf"
-DEFAULT_HR_DOC_PATH = "D:/manual_hr_assistance.pdf"
-DEFAULT_WELLNESS_DOC_PATH="D:/wellness/automate_created_wellness.pdf"
-DEFAULT_PRODUCTIVITY_DOC_PATH="D:/productivity/automate_created.pdf"
-DEFAULT_RISK_DOC_PATH="D:/risk/automated_risk_management_queries.pdf"
-DEFAULT_TASK_SKILL_PATH ="C:/Users/Welcome/Downloads/dataset.pdf"
+DEFAULT_IT_DOC_PATH = "D:/Uip-16_project/It_support_agent.pdf"
+DEFAULT_HR_DOC_PATH = "D:/Uip-16_project/hr_assistance.pdf"
+DEFAULT_WELLNESS_DOC_PATH="D:/Uip-16_project/wellness.pdf"
+DEFAULT_PRODUCTIVITY_DOC_PATH="D:/Uip-16_project/It_support_agent.pdf"
+DEFAULT_RISK_DOC_PATH="D:/Uip-16_project/risk.pdf"
+DEFAULT_TASK_SKILL_PATH ="D:/Uip-16_project/task_estimation.pdf"
 
+def normalize_document_content(documents):
+    for doc in documents:
+        doc.page_content = re.sub(r"([A-Za-z]+)\n\s*([a-z])", r"\1\2", doc.page_content)
+        doc.page_content = re.sub(r"\n(?=\w)", " ", doc.page_content)
+    return documents
 
-# Load and index document
 def load_and_index_documents(document_path: str, query: str):
     global vector_store
-    
     if vector_store._collection is None:
         vector_store.get_collection()
 
     print(f"📂 Loading document from: {document_path}")
     loader = PyPDFLoader(document_path) if document_path.endswith(".pdf") else TextLoader(document_path)
     documents = loader.load()
-    
+    documents = normalize_document_content(documents)
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
     split_docs = text_splitter.split_documents(documents)
     print(f"📂 Loaded {len(split_docs)} chunks from {document_path}")
-
-    vector_store.add_documents(split_docs)
-    relevant_docs = vector_store.similarity_search(query, k=3)
-    print(f"✅ Retrieved {len(relevant_docs)} relevant documents.")
-    
-    return [doc.page_content for doc in relevant_docs]
+    filtered_docs = [doc for doc in split_docs if doc and getattr(doc, "page_content", None)]
+    vector_store.add_documents(filtered_docs)
+    if not isinstance(query, str) or not query.strip():
+        query = "default"
+    try:
+        relevant_docs = vector_store.similarity_search(query, k=3)
+        print(f"✅ Retrieved {len(relevant_docs)} relevant documents.")
+        return [doc.page_content for doc in relevant_docs if doc and getattr(doc, "page_content", None)]
+    except Exception as e:
+        print(f"❌ Error during similarity search: {e}")
+        return []
 
 
 # Initialize LLM
@@ -75,7 +83,7 @@ class State(BaseModel):
     estimated_completion: Optional[str] = None
     leave_days: Optional[int] = 0
     actual_working_days: Optional[int] = 0
-
+    formatted_answer: Optional[str] = None
 
 # Query getter
 def get_query(state: State) -> str:
@@ -102,6 +110,7 @@ def documentation_search(state: State) -> Dict:
     ])
     return {"doc_search_response": response.content}
 
+
 # IT support with RAG
 def it_support(state: State) -> Dict:
     docs = ""
@@ -126,6 +135,7 @@ def it_support(state: State) -> Dict:
         HumanMessage(content=f"Query: {state.query}\nRelevant IT Docs:\n{docs}")
     ])
     return {"it_response": response.content}
+
 
 # HR assistance with RAG
 def hr_assistance(state: State) -> Dict:
@@ -153,6 +163,7 @@ def hr_assistance(state: State) -> Dict:
     return {"hr_response": response.content}
 
 
+# Wellness assistance with RAG
 def wellness(state: State) -> Dict:
     docs = ""
     if os.path.exists(DEFAULT_WELLNESS_DOC_PATH):
@@ -182,6 +193,7 @@ def wellness(state: State) -> Dict:
     return {"wellness": response.content}
 
 
+# Productivity assistance with RAG
 def productivity(state: State) -> Dict:
     docs = ""
     if os.path.exists(DEFAULT_PRODUCTIVITY_DOC_PATH):
@@ -210,7 +222,7 @@ def productivity(state: State) -> Dict:
     return {"productivity": response.content}
 
 
-
+# Risk assistance with RAG
 def risk(state: State) -> Dict:
     docs = ""
     if os.path.exists(DEFAULT_RISK_DOC_PATH):
@@ -258,15 +270,12 @@ def web_search(state: State) -> Dict:
     return {"web_search_response": response.content}
 
 
+# Task Assign assistance 
 def assign_task(state: State) -> Dict:
     """Assigns a task to the most suitable person based on skills."""
     task_description = state.task or ""
-    
-    # Load relevant documents
     docs = load_and_index_documents(DEFAULT_TASK_SKILL_PATH, task_description)
     docs_content = "\n".join(docs) if docs else "No relevant documents found."
-    
-    # System and Human Message Prompts for Task Assignment
     system_message = """
     You are an assistant responsible for assigning tasks to people based on their specific skills, expertise, and current availability (leave schedules).
 
@@ -287,87 +296,46 @@ def assign_task(state: State) -> Dict:
     Your job is to ensure that tasks are assigned to the right person at the right time, optimizing team efficiency and aligning with the overall project goals.
     """
     human_message = f"Query: {state.query}\nTask Description: {task_description}\nRelevant Documents: {docs_content}"
-    
-    # Generate the response from the LLM
     response = llm.invoke([
         SystemMessage(content=system_message),
         HumanMessage(content=human_message)
     ])
-    
-    # Assume document parsing provided the "best_match"
-    best_match = response.content  # You can customize this logic based on document content.
-    
+    best_match = response.content
     print(f"✅ [Agent 1] Task assigned to: {best_match}")
-    
     return {"task": task_description, "assigned_to": best_match}
-# --- Define Task Completion Time Estimation Agent (Agent 2) ---
+
+
+# Task Estimation assistance 
 def estimate_completion(state: State) -> Dict:
     """Estimates the completion time considering employee leave and weekends."""
     assigned_person = state.assigned_to
-    
-    # Load relevant documents for the assigned person
-    docs = load_and_index_documents(DEFAULT_TASK_SKILL_PATH, assigned_person)
-    docs_content = "\n".join(docs) if docs else "No relevant documents found."
-    
-    # System and Human Message Prompts for Completion Estimation
-    system_message = """
-    You are an assistant responsible for estimating the time required to complete a task. Your role is to factor in both the complexity of the task and the availability of the assigned person.
-
-    Your responsibilities include:
-    - Estimating the time it will take to complete a given task, based on the assigned person’s skillset, their availability, and their current workload.
-    - Considering any planned absences (leave schedules), public holidays, and weekends to calculate a more accurate completion date.
-    - Ensuring that you account for any potential productivity blockers (e.g., task complexity, delays, or external dependencies).
-
-    Instructions:
-    1. **Default Task Duration**: Assume a base duration (e.g., 5 working days) to complete the task unless the task description indicates otherwise. You may adjust this duration based on task complexity or the required skillset.
-    2. **Employee Availability**: Review the employee's current leave schedule (vacations, public holidays, etc.). If an employee is on leave, adjust the completion date by excluding those days from the calculation.
-    3. **Weekend Exclusion**: Only count weekdays (Monday to Friday) as working days. Skip weekends (Saturday and Sunday) when calculating the completion time.
-    4. **Leave Schedules**: Refer to the employee's documented leave days to ensure that you account for any scheduled absences during the task's expected duration. If the person is on leave, check for other people with matching skills and availability.
-    5. **Task Complexity Adjustment**: If the task requires advanced expertise or significant effort (e.g., writing complex code, deep analysis), consider adding buffer time to the completion estimate.
-    6. **Estimated Completion Date**: Provide the estimated completion date considering the adjusted task duration, employee leave days, and weekends.
-    7. **No HR/Wellness/Emotional Counseling**: Focus purely on task-related matters. Do not provide advice or support regarding personal health, wellness, or emotional issues unless they directly impact the task at hand (e.g., task overload).
-    8. **Adjusting Deadlines**: If the employee has a heavy workload or other concurrent tasks, adjust the completion estimate to reflect potential delays.
-
-    Your goal is to offer a realistic completion date that helps with project planning and ensures that tasks are completed on time, without overburdening the employee.
-    """
-    human_message = f"Query: {state.query}\nAssigned Person: {assigned_person}\nRelevant Documents: {docs_content}"
-    
-    # Generate the response from the LLM
-    response = llm.invoke([
-        SystemMessage(content=system_message),
-        HumanMessage(content=human_message)
-    ])
-    
-    # Completion estimation logic
     if assigned_person == "No one":
-        print("⚠ [Agent 2] No one assigned, cannot estimate time.")
-        return {**state, "estimated_completion": "N/A"}
-
-    estimated_days = 5  # Assume default time required for the task
+        return {"estimated_completion": "No one assigned, cannot estimate time."}
+    leave_days = set() 
+    estimated_days = 5  
     today = datetime.today().date()
-    
-    # Assuming we extract leave days from document content
-    leave_days = {datetime.strptime(date, "%Y-%m-%d").date() for date in docs if "leave" in date} if docs else set()
-    
     completion_date = today
     days_counted = 0
     leave_days_taken = 0
 
+    # Track leave days taken
     while days_counted < estimated_days:
         completion_date += timedelta(days=1)
-        if completion_date.weekday() < 5:  # Monday to Friday are working days
+        if completion_date.weekday() < 5:  # Weekdays
             if completion_date in leave_days:
                 leave_days_taken += 1
             else:
                 days_counted += 1
 
-    print(f"   ➤ Assigned Person: {assigned_person}")
-    print(f"   ➤ Leave Days Taken: {leave_days_taken}")
-    print(f"   ➤ Actual Working Days Needed: {estimated_days}")
-    print(f"   ➤ Estimated Completion Date: {completion_date}")
+    formatted_answer = {
+        "estimated_completion": str(completion_date),
+        "leave_days_taken": leave_days_taken if leave_days_taken > 0 else "No leave days"
+    }
 
-    return {**state, "leave_days": leave_days_taken, "actual_working_days": estimated_days, "estimated_completion": str(completion_date)}
-
+    state.estimated_completion = str(completion_date)
+    state.leave_days = leave_days_taken
+    state.formatted_answer = formatted_answer
+    return state
 
 
 # Router
@@ -533,83 +501,8 @@ def route_query(state: State) -> str:
         return "Web Search"
     return "Web Search"
 
-# # Build graph
-# graph = lg.StateGraph(State)
-# graph.add_node("Router", lambda state: state.model_dump())
-# graph.add_node("IT Support", it_support)
-# graph.add_node("HR Assistance", hr_assistance)
-# graph.add_node("Web Search", web_search)
-# graph.add_node("Documentation Search", documentation_search)
-# graph.add_node("Wellness Assistance", wellness)
-# graph.add_node("Productivity Assistance", productivity)
-# graph.add_node("Risk Assistance", risk)
-# graph.add_node("Assign Task", assign_task)
-# graph.add_node("Estimate Completion", estimate_completion)
 
-# graph.set_entry_point("Router")
-# graph.add_conditional_edges("Router", route_query, {
-#     "IT Support": "IT Support",
-#     "HR Assistance": "HR Assistance",
-#     "Web Search": "Web Search",
-#     "Documentation Search": "Documentation Search",
-#     "Wellness Assistance": "Wellness Assistance",
-#     "Productivity Assistance": "Productivity Assistance",
-#     "Risk Assistance": "Risk Assistance",
-#     "Assign Task": "Assign Task",
-#     "Estimate Completion": "Estimate Completion",
-#     END: END
-# })
-
-# workflow = graph.compile()
-
-# # Example usage
-# input_data = {
-#     "query": "Our team often waits on approvals from other departments. It’s causing standstills, and we don’t know who to escalate to"
-#     # "document_path": "C:/Users/Welcome/Downloads/SIMULINK BLOCK.pdf"
-# }
-
-# result = workflow.invoke(State(**input_data))
-# print(result)
-
-# # Build graph
-# graph = lg.StateGraph(State)
-# graph.add_node("Router", lambda state: state.model_dump())
-# graph.add_node("IT Support", it_support)
-# graph.add_node("HR Assistance", hr_assistance)
-# graph.add_node("Web Search", web_search)
-# graph.add_node("Documentation Search", documentation_search)
-# graph.add_node("Wellness Assistance", wellness)
-# graph.add_node("Productivity Assistance", productivity)
-# graph.add_node("Risk Assistance", risk)
-# graph.add_node("Assign Task", assign_task)
-# graph.add_node("Estimate Completion", estimate_completion)
-
-# graph.set_entry_point("Router")
-# graph.add_conditional_edges("Router", route_query, {
-#     "IT Support": "IT Support",
-#     "HR Assistance": "HR Assistance",
-#     "Web Search": "Web Search",
-#     "Documentation Search": "Documentation Search",
-#     "Wellness Assistance": "Wellness Assistance",
-#     "Productivity Assistance": "Productivity Assistance",
-#     "Risk Assistance": "Risk Assistance",
-#     "Assign Task": "Assign Task",
-#     "Estimate Completion": "Estimate Completion",
-#     END: END
-# })
-
-# workflow = graph.compile()
-
-# # Example usage
-# input_data = {
-#     "query": "We've experienced delays in the last two sprints due to underestimated testing time. I?m worried it might happen again in the upcoming release."
-#     # "document_path": "C:/Users/Welcome/Downloads/SIMULINK BLOCK.pdf"
-# }
-
-# result = workflow.invoke(State(**input_data))
-# print(result)
 def mainLogicStartsHere(userQuery:str):
-    # Build graph
     graph = lg.StateGraph(State)
     graph.add_node("Router", lambda state: state.model_dump())
     graph.add_node("IT Support", it_support)
@@ -637,26 +530,19 @@ def mainLogicStartsHere(userQuery:str):
     })
 
     workflow = graph.compile()
-
-    # Example usage
+    
     input_data = {
         "query": userQuery,
-        # "query": "We've experienced delays in the last two sprints due to underestimated testing time. I?m worried it might happen again in the upcoming release."
         # "document_path": "C:/Users/Welcome/Downloads/SIMULINK BLOCK.pdf"
     }
 
     result = workflow.invoke(State(**input_data))
     print("Agents.py res",result)
-    # return result
     final_output = {"query": result.get("query")}
     for key in ["risk", "it_response", "hr_response", "wellness", "productivity", "web_search_response", "doc_search_response", "assigned_to", "estimated_completion"]:
         if result.get(key):
             final_output["response"] = result[key]
             break
-
-# Return the final_output instead of printing it
     return final_output
-    # return {'response':f"{userQuery} yes done"}
 
-# if __name__ == "__main__":
-#     mainLogicStartsHere()
+

@@ -8,7 +8,7 @@ sys.path.insert(0, '..')
 
 app = Flask("__name__")
 CORS(app, resources={r"*": {"origins": "http://localhost:3000"}})
-# CORS(app)
+
 
 @app.route('/conversation',methods=['POST'])
 def invokeModel():
@@ -22,6 +22,18 @@ def invokeModel():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
