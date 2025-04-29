@@ -19,18 +19,21 @@ load_dotenv()
 groq_api_key = os.getenv("GROQ_API_KEY")
 
 
+# Initialize LLM
+llm = ChatGroq(model_name="llama3-70b-8192", temperature=0, groq_api_key=groq_api_key)
+
 # Initialize embedding and vector store
 embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 vector_store = Chroma(embedding_function=embedding_model)
 
 
 # Set default document paths for RAG
-DEFAULT_IT_DOC_PATH = "D:/Uip-16_project/It_support_agent.pdf"
-DEFAULT_HR_DOC_PATH = "D:/Uip-16_project/hr_assistance.pdf"
-DEFAULT_WELLNESS_DOC_PATH="D:/Uip-16_project/wellness.pdf"
-DEFAULT_PRODUCTIVITY_DOC_PATH="D:/Uip-16_project/It_support_agent.pdf"
-DEFAULT_RISK_DOC_PATH="D:/Uip-16_project/risk.pdf"
-DEFAULT_TASK_SKILL_PATH ="D:/Uip-16_project/task_estimation.pdf"
+DEFAULT_IT_DOC_PATH = "D:/ReactFlow/It_support_agent.pdf"
+DEFAULT_HR_DOC_PATH = "D:/ReactFlow/hr_assistance.pdf"
+DEFAULT_WELLNESS_DOC_PATH="D:/ReactFlow/wellness.pdf"
+DEFAULT_PRODUCTIVITY_DOC_PATH="D:/ReactFlow/productivity.pdf"
+DEFAULT_RISK_DOC_PATH="D:/ReactFlow/risk.pdf"
+DEFAULT_TASK_SKILL_PATH ="D:/ReactFlow/task_estimation.pdf"
 
 def normalize_document_content(documents):
     for doc in documents:
@@ -61,12 +64,6 @@ def load_and_index_documents(document_path: str, query: str):
     except Exception as e:
         print(f"❌ Error during similarity search: {e}")
         return []
-
-
-# Initialize LLM
-llm = ChatGroq(model_name="llama3-70b-8192", temperature=0, groq_api_key=groq_api_key)
-
-
 # Define state
 class State(BaseModel):
     query: str
@@ -543,6 +540,10 @@ def mainLogicStartsHere(userQuery:str):
         if result.get(key):
             final_output["response"] = result[key]
             break
+    print("########",final_output)
+    print("type of",type(final_output))
+    print("final_response",final_output["response"])
     return final_output
 
 
+mainLogicStartsHere("How do I request a new laptop or hardware upgrade? ")

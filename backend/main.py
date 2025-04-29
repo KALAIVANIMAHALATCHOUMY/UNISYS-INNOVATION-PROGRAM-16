@@ -11,14 +11,20 @@ UPLOAD_FOLDER = './myFiles/'
 CORS(app, resources={r"*": {"origins": "http://localhost:3000"}})
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+# @app.route('/conversation',methods=['POST'])
+# def invokeModel():
+#     userQry = request.data.decode('utf-8')
+#     print(userQry)
+#     res = mainLogicStartsHere(userQry)
+#     print("res", res['response'])
+#     return jsonify(res['response'])
 @app.route('/conversation',methods=['POST'])
 def invokeModel():
     userQry = request.data.decode('utf-8')
     print(userQry)
     res = mainLogicStartsHere(userQry)
     print("res", res['response'])
-    return jsonify(res['response'])
-
+    return jsonify(res)
 
 @app.route("/uploadFiles", methods=['POST'])
 def uploadFiles():

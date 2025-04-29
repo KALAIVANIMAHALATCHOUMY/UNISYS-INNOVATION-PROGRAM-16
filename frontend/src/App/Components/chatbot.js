@@ -154,7 +154,7 @@ export default function ChatBotApp() {
         {/* Chat Messages */}
         <Box flex={1} overflow="auto" mb={1} px={2} id="chat-container">
           {userSystemConversationsFromRedux?.map((msg, index) => (
-            console.log(msg.sender, msg.message),
+            console.log(msg.sender, msg.message["response"]),
             <Box
               key={index}
               display="flex"
@@ -170,7 +170,7 @@ export default function ChatBotApp() {
                 maxWidth="75%"
                 mr={msg.sender === "user" ? 1 : 0}
               >
-                <TypeWritterEffect  text={msg.message} typeUserorBot={msg.sender} />
+                <TypeWritterEffect  text={msg.sender === "user"? msg.message : msg.message["response"]} typeUserorBot={msg.sender} />
                 {/* {msg.message} */}
                 {/* {msg.message.split("\n").map((line, i) => (
                   <div key={i}>{line}</div>
